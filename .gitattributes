@@ -1,0 +1,6 @@
+* text=auto
+*.txt text
+*.md text
+*.py text
+
+*.gif binary
