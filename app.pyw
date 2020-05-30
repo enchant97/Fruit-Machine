@@ -4,13 +4,14 @@ made by Leo Spratt please credit me
 if you use this code elsewhere
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Leo Spratt"
 
-from collections import Counter
 import pathlib
 import tkinter as tk
+from collections import Counter
 from random import randint
+from tkinter.messagebox import showinfo
 
 SCRIPT_FILEPATH = pathlib.Path(__file__).parent.absolute()
 app_config = {
@@ -30,16 +31,23 @@ app_config = {
 }
 
 
-class CreditsLabel(tk.Label):
+class ValueLabel(tk.Label):
     """
     used to allow easy access to update the credits display
     """
-    def __init__(self, start_credits, *args, **kwargs):
+    def __init__(self, start_value, text, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.config(text=f"Credits: {start_credits}")
+        self.__text = text
+        self.value = start_value
 
-    def update_credits(self, newval):
-        self.config(text=f"Credits: {newval}")
+    @property
+    def value(self):
+        return self.__value
+
+    @value.setter
+    def value(self, newval):
+        self.__value = newval
+        self.config(text=f"{self.__text}: {newval}")
 
 
 class GameReel:
@@ -79,6 +87,7 @@ class GameReel:
             return 100
         elif counts[1] == 2:
             return 50
+        return 0
 
     def spin(self):
         """
@@ -155,42 +164,57 @@ class AppGui(tk.Tk):
     The tkinter root window for the game
     """
     __app_config = app_config
-    # __reels = []
     __images = {}
     __credits = 0
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.title("Fruit Machine " + self.app_version)
         self.__credits = self.__app_config["CREDITS"]
+        self.__reels = GameReels()
 
         self.__load_images()
-        # self.__reels_frame = tk.Frame(self)
-        # self.__load_reels()
         self.__reels_frame = ReelsFrame(self.__images["BELL"], self)
         self.__reels_frame.grid(row=0, column=0, columnspan=2)
         self.__l_combinations = tk.Label(self, image=self.__images["COMBINATIONS"])
         self.__l_combinations.grid(row=0, column=2)
-        self.__l_credits = CreditsLabel(self.__credits, self)
-        self.__l_credits.grid(row=1, column=0)
+        self.__l_curr_winnings = ValueLabel(0, "Current Winnings", self)
+        self.__l_curr_winnings.grid(row=1, column=0)
+        self.__l_credits = ValueLabel(self.__credits, "Credits", self)
+        self.__l_credits.grid(row=2, column=0)
         self.__spin_bnt = tk.Button(self, text="Spin (costs 20)", command=self.spin)
         self.__spin_bnt.grid(row=1, column=1)
 
-    def __load_reels(self):
-        for row in range(0, 3):
-            temp_col = []
-            for col in range(0, 3):
-                temp_label = tk.Label(self.__reels_frame)
-                temp_label.config(image=self.__images["BELL"])
-                temp_col.append(temp_label)
-                temp_col[col].grid(row=row, column=col)
-            self.__reels.append(temp_col)
+    def load_reel_images(self):
+        """
+        loads reel images from the current spin of reels
+        """
+        curr_reels = self.__reels.reels
+        for row in range(len(curr_reels)):
+            for col in range(len(curr_reels[row].reel)):
+                self.__reels_frame.set_image(
+                    row, col,
+                    self.__images.get(curr_reels[row].reel[col])
+                    )
 
     def spin(self):
         """
         called when the spin button is pressed
         """
         self.__credits -= 20
-        self.__l_credits.update_credits(self.__credits)
+        self.__l_credits.value = self.__credits
+        self.__reels.spin()
+        self.load_reel_images()
+        credits_won = self.__reels.calc_reels()
+        if credits_won == "GAMEOVER":
+            showinfo(title="Game Over", message="You got 3 skulls")
+        else:
+            temp_credits = self.__credits
+            temp_credits += credits_won
+            self.__credits = temp_credits
+            self.__l_credits.value = self.__credits
+            self.__l_curr_winnings.value = credits_won
+            if temp_credits < 0:
+                showinfo(title="Game Over", message="You have gone into negative credits")
 
     def __load_images(self):
         img_scale = self.__app_config["IMAGE_SCALE"]
