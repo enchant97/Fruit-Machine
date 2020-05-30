@@ -4,7 +4,7 @@ made by Leo Spratt please credit me
 if you use this code elsewhere
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __author__ = "Leo Spratt"
 
 import pathlib
@@ -77,9 +77,9 @@ class GameReel:
         if counts[1] == 1:
             return 0
         elif counts[0] == "SKULL":
-            if counts[0][1] == 3:
+            if counts[1] == 3:
                 return "GAMEOVER"
-            elif counts[0][1] == 2:
+            elif counts[1] == 2:
                 return -100
         elif counts[0] == "BELL" and counts[1] == 3:
             return 500
@@ -87,7 +87,6 @@ class GameReel:
             return 100
         elif counts[1] == 2:
             return 50
-        return 0
 
     def spin(self):
         """
@@ -196,6 +195,14 @@ class AppGui(tk.Tk):
                     self.__images.get(curr_reels[row].reel[col])
                     )
 
+    def reset_game(self):
+        """
+        resets the credits
+        """
+        self.__credits = self.__app_config["CREDITS"]
+        self.__l_curr_winnings.value = 0
+        self.__l_credits.value = self.__credits
+
     def spin(self):
         """
         called when the spin button is pressed
@@ -207,6 +214,7 @@ class AppGui(tk.Tk):
         credits_won = self.__reels.calc_reels()
         if credits_won == "GAMEOVER":
             showinfo(title="Game Over", message="You got 3 skulls")
+            self.reset_game()
         else:
             temp_credits = self.__credits
             temp_credits += credits_won
@@ -215,8 +223,12 @@ class AppGui(tk.Tk):
             self.__l_curr_winnings.value = credits_won
             if temp_credits < 0:
                 showinfo(title="Game Over", message="You have gone into negative credits")
+                self.reset_game()
 
     def __load_images(self):
+        """
+        adds the game assets from file to tk.PhotoImage
+        """
         img_scale = self.__app_config["IMAGE_SCALE"]
         for key in self.__app_config["ASSETS"].keys():
             file_path = self.__app_config["ASSETS"][key]
