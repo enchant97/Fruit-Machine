@@ -16,31 +16,31 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 __author__ = "Leo Spratt"
 
+import enum
 import pathlib
+import random
 import tkinter as tk
 from collections import Counter
-from random import randint
 from tkinter.messagebox import showinfo
 
 SCRIPT_FILEPATH = pathlib.Path(__file__).parent.absolute()
-app_config = {
-    "CREDITS": 100,
-    "GO_COST": 20,
-    "LOAD_IMAGES_LOCAL": True,
-    "IMAGE_SCALE": 4,
-    "ASSETS": {
-        "COMBINATIONS": "assets/combinations.gif",
-        "BELL": "assets/bell.gif",
-        "CHERRY": "assets/cherry.gif",
-        "LEMON": "assets/lemon.gif",
-        "ORANGE": "assets/orange.gif",
-        "STAR": "assets/star.gif",
-        "SKULL": "assets/skull.gif"
-    }
-}
+
+
+@enum.unique
+class IconNames(enum.IntEnum):
+    """
+    Enums for Icon Names
+    """
+    COMBINATIONS = enum.auto()
+    SKULL = enum.auto()
+    BELL = enum.auto()
+    CHERRY = enum.auto()
+    LEMON = enum.auto()
+    ORANGE = enum.auto()
+    STAR = enum.auto()
 
 
 class ValueLabel(tk.Label):
@@ -68,15 +68,16 @@ class GameReel:
     contains each column for a row
     """
     __choices = (
-        "BELL",
-        "CHERRY",
-        "LEMON",
-        "ORANGE",
-        "STAR",
-        "SKULL"
+        IconNames.BELL,
+        IconNames.CHERRY,
+        IconNames.LEMON,
+        IconNames.ORANGE,
+        IconNames.STAR,
+        IconNames.SKULL
     )
+    __weights = (1, 3, 3, 3, 3, 5)
     def __init__(self):
-        self.__reel = ["BELL", "BELL", "BELL"]
+        self.__reel = [IconNames.BELL, IconNames.BELL, IconNames.BELL]
 
     def calc_row(self):
         """
@@ -88,26 +89,30 @@ class GameReel:
         counts = Counter(self.__reel).most_common(1)[0]
         if counts[1] == 1:
             return 0
-        elif counts[0] == "SKULL":
+        elif counts[0] == IconNames.SKULL:
             if counts[1] == 3:
                 return "GAMEOVER"
             elif counts[1] == 2:
                 return -100
-        elif counts[0] == "BELL" and counts[1] == 3:
+        elif counts[0] == IconNames.BELL and counts[1] == 3:
             return 500
         elif counts[1] == 3:
             return 100
         elif counts[1] == 2:
             return 50
 
+    def __spin_reel_col(self):
+        return random.choices(self.__choices, self.__weights)[0]
+
     def spin(self):
         """
-        spins the row
+        spins the row, using choices and
+        weights for randomly picking
         """
         self.__reel = [
-            self.__choices[randint(0, 5)],
-            self.__choices[randint(0, 5)],
-            self.__choices[randint(0, 5)]
+            self.__spin_reel_col(),
+            self.__spin_reel_col(),
+            self.__spin_reel_col()
         ]
 
     @property
@@ -121,6 +126,12 @@ class GameReels:
     contains each row for the reel
     """
     def __init__(self):
+        self.__reels = [GameReel() for i in range(3)]
+
+    def to_default(self):
+        """
+        reset the reels to default values
+        """
         self.__reels = [GameReel() for i in range(3)]
 
     def calc_reels(self):
@@ -149,6 +160,7 @@ class GameReels:
     def reels(self):
         return self.__reels
 
+
 class ReelsFrame(tk.Frame):
     """
     The game reels in a tkinter frame
@@ -173,20 +185,22 @@ class ReelsFrame(tk.Frame):
 class AppGui(tk.Tk):
     """
     The tkinter root window for the game
+
+        :param app_config: dict of the app config
     """
-    __app_config = app_config
     __images = {}
     __credits = 0
-    def __init__(self, **kwargs):
+    def __init__(self, app_config, **kwargs):
         super().__init__(**kwargs)
+        self.__app_config = app_config
         self.title("Fruit Machine " + self.app_version)
         self.__credits = self.__app_config["CREDITS"]
         self.__reels = GameReels()
 
         self.__load_images()
-        self.__reels_frame = ReelsFrame(self.__images["BELL"], self)
+        self.__reels_frame = ReelsFrame(self.__images[IconNames.BELL], self)
         self.__reels_frame.grid(row=0, column=0, columnspan=2)
-        self.__l_combinations = tk.Label(self, image=self.__images["COMBINATIONS"])
+        self.__l_combinations = tk.Label(self, image=self.__images[IconNames.COMBINATIONS])
         self.__l_combinations.grid(row=0, column=2)
         self.__l_curr_winnings = ValueLabel(0, "Current Winnings", self)
         self.__l_curr_winnings.grid(row=1, column=0)
@@ -214,6 +228,8 @@ class AppGui(tk.Tk):
         self.__credits = self.__app_config["CREDITS"]
         self.__l_curr_winnings.value = 0
         self.__l_credits.value = self.__credits
+        self.__reels.to_default()
+        self.load_reel_images()
 
     def spin(self):
         """
@@ -246,8 +262,8 @@ class AppGui(tk.Tk):
             file_path = self.__app_config["ASSETS"][key]
             if self.__app_config["LOAD_IMAGES_LOCAL"] is True:
                 file_path = pathlib.Path.joinpath(SCRIPT_FILEPATH, file_path)
-            if key == "COMBINATIONS":
-                self.__images["COMBINATIONS"] = tk.PhotoImage(file=file_path).zoom(2)
+            if key == IconNames.COMBINATIONS:
+                self.__images[IconNames.COMBINATIONS] = tk.PhotoImage(file=file_path).zoom(2)
             else:
                 self.__images[key] = tk.PhotoImage(file=file_path).zoom(img_scale)
 
@@ -259,6 +275,25 @@ class AppGui(tk.Tk):
         """returns the app __version__"""
         return __version__
 
-if __name__ == "__main__":
-    root = AppGui()
+
+def main():
+    app_config = {
+        "CREDITS": 100,
+        "GO_COST": 20,
+        "LOAD_IMAGES_LOCAL": True,
+        "IMAGE_SCALE": 4,
+        "ASSETS": {
+            IconNames.COMBINATIONS: "assets/combinations.gif",
+            IconNames.BELL: "assets/bell.gif",
+            IconNames.CHERRY: "assets/cherry.gif",
+            IconNames.LEMON: "assets/lemon.gif",
+            IconNames.ORANGE: "assets/orange.gif",
+            IconNames.STAR: "assets/star.gif",
+            IconNames.SKULL: "assets/skull.gif"
+        }
+    }
+    root = AppGui(app_config)
     root.mainloop()
+
+if __name__ == "__main__":
+    main()
