@@ -9,6 +9,7 @@ A fun fruit machine that is made in python3 using tkinter.
 To run the game just run the app.pyw with Python.
 
 ## License
+### Code
 Copyright (C) 2018 Leo Spratt
 
 This program is free software: you can redistribute it and/or modify
@@ -23,3 +24,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+### Artwork
+CC BY-NC-SA 4.0
+
+See <https://creativecommons.org/licenses/by-nc-sa/4.0/> For more info.
