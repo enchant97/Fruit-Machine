@@ -20,14 +20,14 @@ __version__ = "0.3.0"
 __author__ = "Leo Spratt"
 
 import enum
-import pathlib
 import random
 import tkinter as tk
 from collections import Counter
 from dataclasses import dataclass
+from pathlib import Path
 from tkinter.messagebox import showinfo
 
-SCRIPT_FILEPATH = pathlib.Path(__file__).parent.absolute()
+SCRIPT_FILEPATH = Path(__file__).parent.absolute()
 
 
 @enum.unique
@@ -122,11 +122,7 @@ class GameReel:
         spins the row, using choices and
         weights for randomly picking
         """
-        self.__reel = [
-            self.__spin_reel_col(),
-            self.__spin_reel_col(),
-            self.__spin_reel_col()
-        ]
+        self.__reel = [self.__spin_reel_col() for _ in range(3)]
 
     @property
     def reel(self):
@@ -138,14 +134,15 @@ class GameReels:
     the game reels class that
     contains each row for the reel
     """
+    __reels: list[GameReel] = None
     def __init__(self):
-        self.__reels = [GameReel() for i in range(3)]
+        self.to_default()
 
     def to_default(self):
         """
         reset the reels to default values
         """
-        self.__reels = [GameReel() for i in range(3)]
+        self.__reels = [GameReel() for _ in range(3)]
 
     def calc_reels(self):
         """
@@ -181,11 +178,31 @@ class ReelsFrame(tk.Frame):
     __game_reels = []
     def __init__(self, default_image: tk.PhotoImage, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for row in range(0, 3):
+        self.__load_reel_images(default_image)
+
+    def __setup_reel_image_col(self, image: tk.PhotoImage, row: int, col: int):
+        """
+        setup a reel column image
+
+            :param image: the image to use
+            :param row: the current row
+            :param col: the current column
+            :return: the label
+        """
+        reel_column = tk.Label(self, image=image)
+        reel_column.grid(row=row, column=col)
+        return reel_column
+
+    def __load_reel_images(self, image: tk.PhotoImage):
+        """
+        add reel images into frame
+
+            :param image: the image to load into game reels
+        """
+        for row in range(3):
             temp_col = []
-            for col in range(0, 3):
-                temp_col.append(tk.Label(self, image=default_image))
-                temp_col[col].grid(row=row, column=col)
+            for col in range(3):
+                temp_col.append(self.__setup_reel_image_col(image, row, col))
             self.__game_reels.append(temp_col)
 
     def set_image(self, row, column, new_image: tk.PhotoImage):
@@ -199,7 +216,7 @@ class AppGui(tk.Tk):
     """
     The tkinter root window for the game
 
-        :param app_config: dict of the app config
+        :param app_config: the app config
     """
     __images = {}
     __credits = 0
@@ -230,13 +247,12 @@ class AppGui(tk.Tk):
         """
         loads reel images from the current spin of reels
         """
-        curr_reels = self.__reels.reels
-        for row in range(len(curr_reels)):
-            for col in range(len(curr_reels[row].reel)):
+        for row, reel_row in enumerate(self.__reels.reels):
+            for col, reel_col in enumerate(reel_row.reel):
                 self.__reels_frame.set_image(
                     row, col,
-                    self.__images.get(curr_reels[row].reel[col])
-                    )
+                    self.__images.get(reel_col)
+                )
 
     def reset_game(self):
         """
@@ -267,7 +283,7 @@ class AppGui(tk.Tk):
             self.__l_credits.value = self.__credits
             self.__l_curr_winnings.value = credits_won
             if temp_credits < 0:
-                showinfo(title="Game Over", message="You have gone into negative credits")
+                showinfo(title="Game Over", message="You have lost all of your credits!!!")
                 self.reset_game()
 
     def __load_images(self):
@@ -275,10 +291,10 @@ class AppGui(tk.Tk):
         adds the game assets from file to tk.PhotoImage
         """
         img_scale = self.__app_config.image_scale
-        for key in self.__app_config.assets.keys():
+        for key in self.__app_config.assets:
             file_path = self.__app_config.assets[key]
             if self.__app_config.load_images_local is True:
-                file_path = pathlib.Path.joinpath(SCRIPT_FILEPATH, file_path)
+                file_path = Path.joinpath(SCRIPT_FILEPATH, file_path)
             if key == IconNames.COMBINATIONS:
                 self.__images[IconNames.COMBINATIONS] = tk.PhotoImage(file=file_path).zoom(2)
             else:
@@ -300,6 +316,9 @@ class AppGui(tk.Tk):
 
 
 def main():
+    """
+    main entry point of the app
+    """
     app_config = AppSettings(
         starting_credits=100,
         go_cost=20,
