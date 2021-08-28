@@ -24,6 +24,7 @@ import pathlib
 import random
 import tkinter as tk
 from collections import Counter
+from dataclasses import dataclass
 from tkinter.messagebox import showinfo
 
 SCRIPT_FILEPATH = pathlib.Path(__file__).parent.absolute()
@@ -41,6 +42,18 @@ class IconNames(enum.IntEnum):
     LEMON = enum.auto()
     ORANGE = enum.auto()
     STAR = enum.auto()
+
+
+@dataclass
+class AppSettings:
+    """
+    Holds the app settings
+    """
+    starting_credits: int
+    go_cost: int
+    load_images_local: bool
+    image_scale: int
+    assets: dict
 
 
 class ValueLabel(tk.Label):
@@ -190,11 +203,11 @@ class AppGui(tk.Tk):
     """
     __images = {}
     __credits = 0
-    def __init__(self, app_config, **kwargs):
+    def __init__(self, app_config: AppSettings, **kwargs):
         super().__init__(**kwargs)
         self.__app_config = app_config
         self.title("Fruit Machine " + self.app_version)
-        self.__credits = self.__app_config["CREDITS"]
+        self.__credits = self.__app_config.starting_credits
         self.__reels = GameReels()
 
         self.__load_images()
@@ -206,7 +219,11 @@ class AppGui(tk.Tk):
         self.__l_curr_winnings.grid(row=1, column=0)
         self.__l_credits = ValueLabel(self.__credits, "Credits", self)
         self.__l_credits.grid(row=2, column=0)
-        self.__spin_bnt = tk.Button(self, text="Spin (costs 20)", command=self.spin)
+        self.__spin_bnt = tk.Button(
+            self,
+            text=f"Spin (costs {self.__app_config.go_cost})",
+            command=self.spin
+        )
         self.__spin_bnt.grid(row=1, column=1)
 
     def load_reel_images(self):
@@ -225,7 +242,7 @@ class AppGui(tk.Tk):
         """
         resets the credits
         """
-        self.__credits = self.__app_config["CREDITS"]
+        self.__credits = self.__app_config.starting_credits
         self.__l_curr_winnings.value = 0
         self.__l_credits.value = self.__credits
         self.__reels.to_default()
@@ -235,7 +252,7 @@ class AppGui(tk.Tk):
         """
         called when the spin button is pressed
         """
-        self.__credits -= 20
+        self.__credits -= self.__app_config.go_cost
         self.__l_credits.value = self.__credits
         self.__reels.spin()
         self.load_reel_images()
@@ -257,10 +274,10 @@ class AppGui(tk.Tk):
         """
         adds the game assets from file to tk.PhotoImage
         """
-        img_scale = self.__app_config["IMAGE_SCALE"]
-        for key in self.__app_config["ASSETS"].keys():
-            file_path = self.__app_config["ASSETS"][key]
-            if self.__app_config["LOAD_IMAGES_LOCAL"] is True:
+        img_scale = self.__app_config.image_scale
+        for key in self.__app_config.assets.keys():
+            file_path = self.__app_config.assets[key]
+            if self.__app_config.load_images_local is True:
                 file_path = pathlib.Path.joinpath(SCRIPT_FILEPATH, file_path)
             if key == IconNames.COMBINATIONS:
                 self.__images[IconNames.COMBINATIONS] = tk.PhotoImage(file=file_path).zoom(2)
@@ -268,21 +285,27 @@ class AppGui(tk.Tk):
                 self.__images[key] = tk.PhotoImage(file=file_path).zoom(img_scale)
 
     def load_config(self, new_config):
+        """
+        loads a new config,
+        overwriting the old one
+        """
         self.__app_config = new_config
 
     @property
     def app_version(self):
-        """returns the app __version__"""
+        """
+        returns the app __version__
+        """
         return __version__
 
 
 def main():
-    app_config = {
-        "CREDITS": 100,
-        "GO_COST": 20,
-        "LOAD_IMAGES_LOCAL": True,
-        "IMAGE_SCALE": 4,
-        "ASSETS": {
+    app_config = AppSettings(
+        starting_credits=100,
+        go_cost=20,
+        load_images_local=True,
+        image_scale=4,
+        assets={
             IconNames.COMBINATIONS: "assets/combinations.gif",
             IconNames.BELL: "assets/bell.gif",
             IconNames.CHERRY: "assets/cherry.gif",
@@ -290,8 +313,8 @@ def main():
             IconNames.ORANGE: "assets/orange.gif",
             IconNames.STAR: "assets/star.gif",
             IconNames.SKULL: "assets/skull.gif"
-        }
-    }
+        },
+    )
     root = AppGui(app_config)
     root.mainloop()
 
