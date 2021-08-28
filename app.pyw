@@ -1,6 +1,6 @@
 """
 Python Fruit Machine
-Copyright (C) 2018  {Leo Spratt}
+Copyright (C) 2018 Leo Spratt
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
