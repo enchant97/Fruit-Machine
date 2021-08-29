@@ -6,11 +6,11 @@ __all__ = ["ValueLabel", "ReelsFrame", "AppGui"]
 import tkinter as tk
 from tkinter.messagebox import showinfo
 
-from . import __version__
-from .exceptions import (LoosingReelException, NoCreditsException,
+from .. import __version__
+from ..exceptions import (LoosingReelException, NoCreditsException,
                          NotEnoughCreditsException)
-from .game import Game
-from .types import AppSettings, IconNames
+from ..game import Game
+from ..types import AppSettings, IconNames
 
 
 class ValueLabel(tk.Label):

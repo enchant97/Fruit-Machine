@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fruit_machine.gui import AppGui
+from fruit_machine.interfaces.tk_gui import AppGui
 from fruit_machine.types import AppSettings, IconNames
 
 ASSETS_FILEPATH = Path(__file__).parent.absolute() / "assets"
