@@ -1,15 +1,16 @@
 """
 the game reels
 """
-__all__ = ["GameReel", "GameReels"]
+__all__ = ["Reel", "Reels"]
 
 from collections import Counter
 from random import choices
 
+from .exceptions import LoosingReelException
 from .types import IconNames
 
 
-class GameReel:
+class Reel:
     """
     The game reel class that
     contains each column for a row
@@ -23,22 +24,23 @@ class GameReel:
         IconNames.SKULL
     )
     __weights = (1, 3, 3, 3, 3, 5)
+
     def __init__(self):
         self.__reel = [IconNames.BELL, IconNames.BELL, IconNames.BELL]
 
-    def calc_row(self):
+    def calc_row(self) -> int:
         """
-        calculates the current row
+        calculates the credits gained/lost on reel
 
-        returns credits gained/loss or
-        'GAMEOVER' if the game is over
+            :raises LoosingReelException: if player got 3 skulls
+            :return: the credits gained/lost
         """
         counts = Counter(self.__reel).most_common(1)[0]
         if counts[1] == 1:
             return 0
         elif counts[0] == IconNames.SKULL:
             if counts[1] == 3:
-                return "GAMEOVER"
+                raise LoosingReelException()
             elif counts[1] == 2:
                 return -100
         elif counts[0] == IconNames.BELL and counts[1] == 3:
@@ -63,12 +65,13 @@ class GameReel:
         return self.__reel
 
 
-class GameReels:
+class Reels:
     """
     the game reels class that
     contains each row for the reel
     """
-    __reels: list[GameReel] = None
+    __reels: list[Reel] = None
+
     def __init__(self):
         self.to_default()
 
@@ -76,20 +79,18 @@ class GameReels:
         """
         reset the reels to default values
         """
-        self.__reels = [GameReel() for _ in range(3)]
+        self.__reels = [Reel() for _ in range(3)]
 
-    def calc_reels(self):
+    def calc_reels(self) -> int:
         """
-        calculates all reels
+        calculates the credits gained/lost on all reels
 
-        returns credits gained/loss or
-        'GAMEOVER' if the game is over
+            :raises LoosingReelException: if player got 3 skulls
+            :return: the credits gained/lost
         """
         credits_ = 0
         for reel in self.__reels:
             reel_value = reel.calc_row()
-            if reel_value == "GAMEOVER":
-                return "GAMEOVER"
             credits_ += reel_value
         return credits_
 

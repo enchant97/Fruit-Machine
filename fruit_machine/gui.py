@@ -7,7 +7,9 @@ import tkinter as tk
 from tkinter.messagebox import showinfo
 
 from . import __version__
-from .reel import GameReels
+from .exceptions import (LoosingReelException, NoCreditsException,
+                         NotEnoughCreditsException)
+from .game import Game
 from .types import AppSettings, IconNames
 
 
@@ -78,13 +80,14 @@ class AppGui(tk.Tk):
         :param app_config: the app config
     """
     __images = {}
-    __credits = 0
     def __init__(self, app_config: AppSettings, **kwargs):
         super().__init__(**kwargs)
         self.__app_config = app_config
         self.title("Fruit Machine " + self.app_version)
-        self.__credits = self.__app_config.starting_credits
-        self.__reels = GameReels()
+        self.__game = Game(
+            self.__app_config.starting_credits,
+            self.__app_config.go_cost,
+        )
 
         self.__load_images()
         self.__reels_frame = ReelsFrame(self.__images[IconNames.BELL], self)
@@ -93,7 +96,7 @@ class AppGui(tk.Tk):
         self.__l_combinations.grid(row=0, column=2)
         self.__l_curr_winnings = ValueLabel(0, "Current Winnings", self)
         self.__l_curr_winnings.grid(row=1, column=0)
-        self.__l_credits = ValueLabel(self.__credits, "Credits", self)
+        self.__l_credits = ValueLabel(self.__game.curr_credits, "Credits", self)
         self.__l_credits.grid(row=2, column=0)
         self.__spin_bnt = tk.Button(
             self,
@@ -106,7 +109,7 @@ class AppGui(tk.Tk):
         """
         loads reel images from the current spin of reels
         """
-        for row, reel_row in enumerate(self.__reels.reels):
+        for row, reel_row in enumerate(self.__game.reels):
             for col, reel_col in enumerate(reel_row.reel):
                 self.__reels_frame.set_image(
                     row, col,
@@ -117,33 +120,33 @@ class AppGui(tk.Tk):
         """
         resets the credits
         """
-        self.__credits = self.__app_config.starting_credits
-        self.__l_curr_winnings.value = 0
-        self.__l_credits.value = self.__credits
-        self.__reels.to_default()
+        self.__game.reset()
+        self.__l_curr_winnings.value = self.__game.credits_won
+        self.__l_credits.value = self.__game.curr_credits
         self.load_reel_images()
 
     def spin(self):
         """
         called when the spin button is pressed
         """
-        self.__credits -= self.__app_config.go_cost
-        self.__l_credits.value = self.__credits
-        self.__reels.spin()
-        self.load_reel_images()
-        credits_won = self.__reels.calc_reels()
-        if credits_won == "GAMEOVER":
-            showinfo(title="Game Over", message="You got 3 skulls")
+        try:
+            self.__game.spin()
+            self.load_reel_images()
+            self.__game.calc_spin()
+            self.__l_credits.value = self.__game.curr_credits
+            self.__l_curr_winnings.value = self.__game.credits_won
+
+        except NotEnoughCreditsException:
+            showinfo(title="Need More Credits", message="You don't have enough credits to spin!")
             self.reset_game()
-        else:
-            temp_credits = self.__credits
-            temp_credits += credits_won
-            self.__credits = temp_credits
-            self.__l_credits.value = self.__credits
-            self.__l_curr_winnings.value = credits_won
-            if temp_credits < 0:
-                showinfo(title="Game Over", message="You have lost all of your credits!!!")
-                self.reset_game()
+
+        except NoCreditsException:
+            showinfo(title="Game Over", message="You have lost all of your credits!")
+            self.reset_game()
+
+        except LoosingReelException:
+            showinfo(title="Game Over", message="You got 3 skulls!")
+            self.reset_game()
 
     def __load_images(self):
         """
